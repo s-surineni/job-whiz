@@ -37,6 +37,12 @@
         </div>
         <label>LinkedIn URL <input type="url" id="linkedin"></label>
         <label>Portfolio <input type="url" id="portfolio"></label>
+        <label>Legally authorized to work?
+          <select id="workAuthorized">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
       </div>
 
       <div class="tab-content" id="tab-professional">
@@ -71,10 +77,20 @@
       </label>
     </section>
 
+    <section class="backup">
+      <h2>Backup</h2>
+      <div class="backup-buttons">
+        <button class="btn secondary" id="exportProfiles">Export Profiles</button>
+        <button class="btn secondary" id="importProfiles">Import Profiles</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;">
+      </div>
+    </section>
+
     <footer>
       <span id="status"></span>
     </footer>
   </div>
+  <script src="../lib/storage.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

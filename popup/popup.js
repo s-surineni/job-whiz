@@ -2,11 +2,27 @@ let currentProfile = null
 let profiles = []
 let settings = {}
 
+function normalizeProfile(profile) {
+  if (!profile) return { ...DEFAULT_PROFILE }
+  return {
+    ...DEFAULT_PROFILE,
+    ...profile,
+    personal: { ...DEFAULT_PROFILE.personal, ...profile.personal },
+    professional: { ...DEFAULT_PROFILE.professional, ...profile.professional },
+    employment: Array.isArray(profile.employment) ? profile.employment : [],
+    education: Array.isArray(profile.education) ? profile.education : [],
+    resume: profile.resume || { filename: '', data: '' }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const storage = await getStorage()
   profiles = storage.profiles
   settings = storage.settings
   currentProfile = profiles.find(p => p.id === settings.activeProfile) || profiles[0]
+  
+  // Ensure profile has all required fields
+  currentProfile = normalizeProfile(currentProfile)
 
   renderProfiles()
   renderTabs()
@@ -20,6 +36,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('addEducation').addEventListener('click', () => addEntry('education'))
   document.getElementById('autoFillDelay').addEventListener('change', onSettingsChange)
   document.getElementById('profileSelect').addEventListener('change', onProfileChange)
+  document.getElementById('exportProfiles').addEventListener('click', onExportProfiles)
+  document.getElementById('importProfiles').addEventListener('click', () => {
+    document.getElementById('importFile').click()
+  })
+  document.getElementById('importFile').addEventListener('change', onImportProfiles)
 
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -44,7 +65,7 @@ function renderTabs() {
 }
 
 function loadProfileIntoForm() {
-  const p = currentProfile.personal
+  const p = currentProfile.personal || {}
   setVal('fullName', p.fullName)
   setVal('email', p.email)
   setVal('phone', p.phone)
@@ -54,8 +75,9 @@ function loadProfileIntoForm() {
   setVal('zip', p.zip)
   setVal('linkedin', p.linkedin)
   setVal('portfolio', p.portfolio)
+  setVal('workAuthorized', p.workAuthorized || 'yes')
 
-  const prof = currentProfile.professional
+  const prof = currentProfile.professional || {}
   setVal('headline', prof.headline)
   setVal('summary', prof.summary)
   setVal('skills', Array.isArray(prof.skills) ? prof.skills.join(', ') : '')
@@ -65,7 +87,7 @@ function loadProfileIntoForm() {
 
 function renderEntries(type) {
   const list = document.getElementById(`${type}List`)
-  const items = currentProfile[type] || []
+  const items = Array.isArray(currentProfile[type]) ? currentProfile[type] : []
   list.innerHTML = items.map((item, i) => `
     <div class="entry-item">
       <span class="remove" data-type="${type}" data-index="${i}">&times;</span>
@@ -110,6 +132,9 @@ function addEntry(type) {
   const empty = type === 'employment'
     ? { company: '', title: '', startDate: '', endDate: '', current: false, description: '' }
     : { institution: '', degree: '', field: '', startDate: '', endDate: '', gpa: '' }
+  if (!Array.isArray(currentProfile[type])) {
+    currentProfile[type] = []
+  }
   currentProfile[type].push(empty)
   renderEntries(type)
 }
@@ -119,20 +144,33 @@ async function onSaveProfile() {
     fullName: getVal('fullName'), email: getVal('email'), phone: getVal('phone'),
     address: getVal('address'), city: getVal('city'), state: getVal('state'),
     zip: getVal('zip'), linkedin: getVal('linkedin'), portfolio: getVal('portfolio'),
-    website: '', country: 'US',
+    website: '', country: 'US', workAuthorized: getVal('workAuthorized'),
   }
   currentProfile.professional = {
     headline: getVal('headline'), summary: getVal('summary'),
     skills: getVal('skills').split(',').map(s => s.trim()).filter(Boolean),
     languages: [], certifications: [],
   }
+  
+  // Ensure employment and education arrays exist
+  if (!Array.isArray(currentProfile.employment)) {
+    currentProfile.employment = []
+  }
+  if (!Array.isArray(currentProfile.education)) {
+    currentProfile.education = []
+  }
 
   const idx = profiles.findIndex(p => p.id === currentProfile.id)
   if (idx >= 0) profiles[idx] = currentProfile
   else profiles.push(currentProfile)
 
-  await saveProfiles(profiles)
-  setStatus('Profile saved', '#2e7d32')
+  try {
+    await saveProfiles(profiles)
+    setStatus('Profile saved ✓', '#2e7d32')
+  } catch (e) {
+    setStatus('Error saving profile', '#d32f2f')
+    console.error('Save error:', e)
+  }
 }
 
 async function onFillForm() {
@@ -163,6 +201,7 @@ async function onSettingsChange() {
 async function onProfileChange() {
   const id = document.getElementById('profileSelect').value
   currentProfile = profiles.find(p => p.id === id) || profiles[0]
+  currentProfile = normalizeProfile(currentProfile)
   settings.activeProfile = id
   await saveSettings(settings)
   loadProfileIntoForm()
@@ -174,9 +213,19 @@ function updatePlatformBadge() {
     if (!tabs[0]?.url) return
     const badge = document.getElementById('platformBadge')
     const url = tabs[0].url
-    if (url.includes('linkedin.com')) { badge.textContent = 'LinkedIn'; badge.className = 'platform-badge active' }
-    else if (url.includes('indeed.com')) { badge.textContent = 'Indeed'; badge.className = 'platform-badge active' }
-    else { badge.textContent = 'No platform detected'; badge.className = 'platform-badge' }
+    if (url.includes('linkedin.com')) { 
+      badge.textContent = 'LinkedIn'
+      badge.className = 'platform-badge active' 
+    } else if (url.includes('indeed.com')) { 
+      badge.textContent = 'Indeed'
+      badge.className = 'platform-badge active' 
+    } else if (url.startsWith('https')) {
+      badge.textContent = 'Job Site'
+      badge.className = 'platform-badge active'
+    } else { 
+      badge.textContent = 'Not Supported'
+      badge.className = 'platform-badge' 
+    }
   })
 }
 
@@ -194,4 +243,61 @@ function setStatus(msg, color) {
   el.textContent = msg
   el.style.color = color || '#888'
   setTimeout(() => { el.textContent = '' }, 3000)
+}
+
+async function onExportProfiles() {
+  const { profiles, settings } = await getStorage()
+  const data = {
+    version: '1.0.0',
+    exported: new Date().toISOString(),
+    profiles,
+    settings
+  }
+  
+  const json = JSON.stringify(data, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `job-whiz-profiles-${new Date().getTime()}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  setStatus('Profiles exported ✓', '#2e7d32')
+}
+
+async function onImportProfiles(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  
+  try {
+    const text = await file.text()
+    const data = JSON.parse(text)
+    
+    if (!data.profiles || !Array.isArray(data.profiles)) {
+      setStatus('Invalid backup file', '#d32f2f')
+      return
+    }
+    
+    await saveProfiles(data.profiles)
+    if (data.settings) {
+      await saveSettings(data.settings)
+    }
+    
+    profiles = data.profiles
+    settings = data.settings || settings
+    currentProfile = profiles.find(p => p.id === settings.activeProfile) || profiles[0]
+    currentProfile = normalizeProfile(currentProfile)
+    
+    renderProfiles()
+    renderTabs()
+    loadProfileIntoForm()
+    setStatus('Profiles imported ✓', '#2e7d32')
+  } catch (err) {
+    console.error('Import error:', err)
+    setStatus('Error importing profiles', '#d32f2f')
+  }
+  
+  e.target.value = ''
 }

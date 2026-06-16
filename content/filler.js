@@ -1,6 +1,5 @@
 ;(async () => {
   const platform = detectPlatform()
-  if (platform === 'unknown') return
 
   chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     if (message.type === 'FILL_JOB_APPLICATION') {
@@ -20,19 +19,55 @@
     const delay = settings.autoFillDelay || 300
 
     let filled = 0
-    for (const [field, selector] of Object.entries(selectors)) {
+    for (const [field, selectorOrArray] of Object.entries(selectors)) {
       const value = getValueFromProfile(profile, field)
       if (!value) continue
 
-      const elements = document.querySelectorAll(selector)
-      for (const el of elements) {
-        if (el.value || el.textContent) continue
-        await fillField(el, value, delay)
-        filled++
+      if (field === 'workAuthorized') {
+        // Special handling for work authorization (likely radio buttons)
+        if (Array.isArray(selectorOrArray)) {
+          for (const selector of selectorOrArray) {
+            const radios = document.querySelectorAll(`${selector}`)
+            for (const radio of radios) {
+              if (radio.type === 'radio' && radio.value.toLowerCase() === value.toLowerCase()) {
+                radio.checked = true
+                radio.dispatchEvent(new Event('change', { bubbles: true }))
+                filled++
+                break
+              }
+            }
+            if (filled > 0) break
+          }
+        } else {
+          const radios = document.querySelectorAll(selectorOrArray)
+          for (const radio of radios) {
+            if (radio.type === 'radio' && radio.value.toLowerCase() === value.toLowerCase()) {
+              radio.checked = true
+              radio.dispatchEvent(new Event('change', { bubbles: true }))
+              filled++
+              break
+            }
+          }
+        }
+      } else {
+        // Regular field handling
+        let element = null
+        if (Array.isArray(selectorOrArray)) {
+          // Generic platform: try selectors in order
+          element = findField(field, selectorOrArray)
+        } else {
+          // Specific platform: use querySelector
+          element = document.querySelector(selectorOrArray)
+        }
+        
+        if (element && (!element.value && !element.textContent)) {
+          await fillField(element, value, delay)
+          filled++
+        }
       }
     }
 
-    if (profile.resume.data) {
+    if (profile.resume && profile.resume.data) {
       const fileInput = document.querySelector('input[type="file"]')
       if (fileInput) {
         const blob = dataURLToBlob(profile.resume.data)
@@ -54,16 +89,23 @@
 
   function clearFilledFields(platform) {
     const selectors = getFieldSelectors(platform)
-    for (const selector of Object.values(selectors)) {
-      document.querySelectorAll(selector).forEach(el => {
-        if (el.tagName.toLowerCase() === 'select') {
-          el.selectedIndex = 0
+    for (const [field, selectorOrArray] of Object.entries(selectors)) {
+      let element = null
+      if (Array.isArray(selectorOrArray)) {
+        element = findField(field, selectorOrArray)
+      } else {
+        element = document.querySelector(selectorOrArray)
+      }
+      
+      if (element) {
+        if (element.tagName.toLowerCase() === 'select') {
+          element.selectedIndex = 0
         } else {
-          el.value = ''
+          element.value = ''
         }
-        el.dispatchEvent(new Event('input', { bubbles: true }))
-        el.dispatchEvent(new Event('change', { bubbles: true }))
-      })
+        element.dispatchEvent(new Event('input', { bubbles: true }))
+        element.dispatchEvent(new Event('change', { bubbles: true }))
+      }
     }
   }
 
@@ -85,6 +127,7 @@
       headline: professional.headline,
       summary: professional.summary,
       skills: Array.isArray(professional.skills) ? professional.skills.join(', ') : '',
+      workAuthorized: personal.workAuthorized,
     }
     return map[field]
   }

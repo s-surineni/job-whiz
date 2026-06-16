@@ -52,6 +52,9 @@ input:focus, textarea:focus, select:focus {
 .btn.secondary:hover { background: #e0e0e0; }
 .actions { display: flex; gap: 6px; margin: 12px 0; }
 .actions .btn { margin: 0; }
+.backup { margin: 12px 0; }
+.backup-buttons { display: flex; gap: 6px; }
+.backup-buttons .btn { margin: 6px 0; }
 .entry-item {
   background: #f9f9f9; border: 1px solid #eee; border-radius: 4px;
   padding: 8px; margin-bottom: 6px; position: relative;
