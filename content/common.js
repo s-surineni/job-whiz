@@ -7,6 +7,22 @@ function detectPlatform() {
 
 function getFieldSelectors(platform) {
   const commonSelectors = {
+    firstName: [
+      'input[name*="firstName" i][type="text"]',
+      'input[name*="first" i][type="text"]',
+      'input[aria-label*="first name" i]',
+      'input[placeholder*="first name" i]',
+      'input[id*="firstName" i]',
+      'input[id*="first-name" i]'
+    ],
+    lastName: [
+      'input[name*="lastName" i][type="text"]',
+      'input[name*="last" i][type="text"]',
+      'input[aria-label*="last name" i]',
+      'input[placeholder*="last name" i]',
+      'input[id*="lastName" i]',
+      'input[id*="last-name" i]'
+    ],
     fullName: [
       'input[name*="name" i][type="text"]',
       'input[aria-label*="name" i]',
@@ -93,6 +109,8 @@ function getFieldSelectors(platform) {
 
   const platformSpecific = {
     linkedin: {
+      firstName: 'input[name="firstName"], input[autocomplete="given-name"]',
+      lastName: 'input[name="lastName"], input[autocomplete="family-name"]',
       fullName: 'input[name="fullName"], input[autocomplete="name"]',
       email: 'input[name="email"], input[autocomplete="email"]',
       phone: 'input[name="phone"], input[autocomplete="tel"]',
@@ -106,6 +124,8 @@ function getFieldSelectors(platform) {
       skills: 'input[name="skills"]',
     },
     indeed: {
+      firstName: 'input[name="firstName"], input[data-testid="firstName"]',
+      lastName: 'input[name="lastName"], input[data-testid="lastName"]',
       fullName: 'input[name="fullName"], input[data-testid="fullName"]',
       email: 'input[name="email"], input[data-testid="email"]',
       phone: 'input[name="phone"], input[data-testid="phone"]',

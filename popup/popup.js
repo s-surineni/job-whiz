@@ -83,7 +83,8 @@ function renderTabs() {
 
 function loadProfileIntoForm() {
   const p = currentProfile.personal || {}
-  setVal('fullName', p.fullName)
+  setVal('firstName', p.firstName)
+  setVal('lastName', p.lastName)
   setVal('email', p.email)
   setVal('phone', p.phone)
   setVal('address', p.address)
@@ -158,7 +159,7 @@ function addEntry(type) {
 
 async function onSaveProfile() {
   currentProfile.personal = {
-    fullName: getVal('fullName'), email: getVal('email'), phone: getVal('phone'),
+    firstName: getVal('firstName'), lastName: getVal('lastName'), email: getVal('email'), phone: getVal('phone'),
     address: getVal('address'), city: getVal('city'), state: getVal('state'),
     zip: getVal('zip'), linkedin: getVal('linkedin'), portfolio: getVal('portfolio'),
     website: '', country: 'US', workAuthorized: getVal('workAuthorized'),

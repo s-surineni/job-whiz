@@ -5,7 +5,7 @@ chrome.runtime.onInstalled.addListener(() => {
         profiles: [{
           id: 'default',
           name: 'Default Profile',
-          personal: { fullName: '', email: '', phone: '', address: '', city: '', state: '', zip: '', country: 'US', linkedin: '', portfolio: '', website: '' },
+          personal: { firstName: '', lastName: '', email: '', phone: '', address: '', city: '', state: '', zip: '', country: 'US', linkedin: '', portfolio: '', website: '' },
           professional: { headline: '', summary: '', skills: [], languages: [], certifications: [] },
           employment: [],
           education: [],

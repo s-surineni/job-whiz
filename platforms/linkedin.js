@@ -1,4 +1,6 @@
 const linkedinSelectors = {
+  firstName: 'input[name="firstName"], input[autocomplete="given-name"], input[id*="firstName"]',
+  lastName: 'input[name="lastName"], input[autocomplete="family-name"], input[id*="lastName"]',
   fullName: 'input[name="fullName"], input[autocomplete="name"], input[id*="name"]',
   email: 'input[name="email"], input[autocomplete="email"], input[id*="email"]',
   phone: 'input[name="phone"], input[autocomplete="tel"], input[id*="phone"]',

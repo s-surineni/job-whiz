@@ -17,6 +17,8 @@
   }
 
   const FIELD_HINTS = {
+    firstName: ['first name', 'given name', 'first'],
+    lastName: ['last name', 'surname', 'family name', 'last'],
     fullName: ['full name', 'name', 'your name', 'applicant name', 'candidate name'],
     email: ['email', 'e-mail', 'email address'],
     phone: ['phone', 'telephone', 'mobile', 'cell'],
@@ -204,6 +206,7 @@
       return null
     }
 
+    // First try the provided selector directly
     const radios = document.querySelectorAll(selectorOrArray)
     for (const radio of radios) {
       if (radio.type === 'radio' && radio.value.toLowerCase() === value.toLowerCase()) {
@@ -212,6 +215,81 @@
         return radio
       }
     }
+
+    // Fallback: heuristically locate work authorization controls by scanning nearby labels
+    const candidates = Array.from(document.querySelectorAll('input[type="radio"], input[type="checkbox"], select'))
+      .filter(el => !el.disabled && el.offsetParent !== null)
+
+    // Group radio inputs by name so we can pick the right option within a group
+    const radiosByName = {}
+    for (const el of candidates) {
+      if (el.type === 'radio' && el.name) {
+        radiosByName[el.name] = radiosByName[el.name] || []
+        radiosByName[el.name].push(el)
+      }
+    }
+
+    // Check radio groups first: prefer groups where the group or options hint at work authorization
+    for (const name of Object.keys(radiosByName)) {
+      const group = radiosByName[name]
+      // compute best score for the group by checking labels of each option and the group container
+      let groupScore = 0
+      for (const opt of group) {
+        const { bestField, score } = getBestFieldHint(opt)
+        if (bestField === 'workAuthorized') groupScore = Math.max(groupScore, score)
+      }
+      if (groupScore >= 2) {
+        // choose the option whose value or label best matches the desired profile value
+        for (const opt of group) {
+          const labelText = normalizeText(getLabelText(opt) || opt.value || opt.getAttribute('aria-label'))
+          if (labelText.includes(normalizeText(String(value)))) {
+            opt.checked = true
+            opt.dispatchEvent(new Event('change', { bubbles: true }))
+            return opt
+          }
+        }
+        // if exact match not found, try matching by yes/no semantics
+        const lower = String(value || '').toLowerCase()
+        const yesVals = ['yes', 'y', 'true', 'eligible', 'authorized', 'right to work']
+        const wantYes = yesVals.some(v => lower.includes(v))
+        for (const opt of group) {
+          const label = normalizeText(getLabelText(opt) || opt.value || opt.getAttribute('aria-label'))
+          if (wantYes && /yes|y|true|eligible|authorized|right to work/.test(label)) {
+            opt.checked = true
+            opt.dispatchEvent(new Event('change', { bubbles: true }))
+            return opt
+          }
+          if (!wantYes && /no|n|false|not authorized|not eligible/.test(label)) {
+            opt.checked = true
+            opt.dispatchEvent(new Event('change', { bubbles: true }))
+            return opt
+          }
+        }
+      }
+    }
+
+    // Check standalone selects/checkboxes as fallback
+    for (const el of candidates) {
+      const { bestField, score } = getBestFieldHint(el)
+      if (bestField !== 'workAuthorized' || score < 2) continue
+      if (el.tagName.toLowerCase() === 'select') {
+        const opts = Array.from(el.options)
+        const found = opts.find(o => normalizeText(o.value || o.text).includes(normalizeText(String(value))))
+        if (found) {
+          el.value = found.value
+          el.dispatchEvent(new Event('change', { bubbles: true }))
+          return el
+        }
+      }
+      if (el.type === 'checkbox') {
+        const lower = String(value || '').toLowerCase()
+        const want = ['yes', 'true', '1', 'on', 'authorized', 'eligible'].some(v => lower.includes(v))
+        el.checked = !!want
+        el.dispatchEvent(new Event('change', { bubbles: true }))
+        return el
+      }
+    }
+
     return null
   }
 
@@ -244,7 +322,9 @@
     const personal = profile.personal || {}
     const professional = profile.professional || {}
     const map = {
-      fullName: personal.fullName,
+      firstName: personal.firstName,
+      lastName: personal.lastName,
+      fullName: `${personal.firstName || ''} ${personal.lastName || ''}`.trim(),
       email: personal.email,
       phone: personal.phone,
       address: personal.address,

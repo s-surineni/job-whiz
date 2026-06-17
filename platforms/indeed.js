@@ -1,4 +1,6 @@
 const indeedSelectors = {
+  firstName: 'input[name="firstName"], input[data-testid="firstName-input"]',
+  lastName: 'input[name="lastName"], input[data-testid="lastName-input"]',
   fullName: 'input[name="fullName"], input[data-testid="fullName-input"]',
   email: 'input[name="email"], input[data-testid="email-input"]',
   phone: 'input[name="phone"], input[data-testid="phone-input"]',
