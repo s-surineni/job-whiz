@@ -59,7 +59,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     .getElementById('exportProfiles')!
     .addEventListener('click', onExportProfiles);
   document.getElementById('importProfiles')!.addEventListener('click', () => {
-    document.getElementById('importFile')!.click();
+    const fileInput = document.getElementById('importFile') as HTMLInputElement;
+    fileInput.value = '';
+    fileInput.click();
   });
   document
     .getElementById('importFile')!
