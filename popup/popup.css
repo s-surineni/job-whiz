@@ -52,6 +52,42 @@ input:focus, textarea:focus, select:focus {
 .btn.secondary:hover { background: #e0e0e0; }
 .actions { display: flex; gap: 6px; margin: 12px 0; }
 .actions .btn { margin: 0; }
+.progress-section { margin: 12px 0; }
+.progress-log {
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: #333;
+}
+.progress-item {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.progress-item:last-child { margin-bottom: 0; }
+.progress-item.info { color: #333; }
+.progress-item.success { color: #2e7d32; }
+.progress-item.error { color: #d32f2f; }
+.progress-empty { color: #777; font-style: italic; }
+.unmatched-section { margin: 12px 0; }
+.unmatched-list {
+  background: #fff8e1;
+  border: 1px solid #ffecb3;
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 54px;
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: #5d4037;
+}
+.unmatched-item { margin-bottom: 8px; }
+.unmatched-item:last-child { margin-bottom: 0; }
+.unmatched-field { font-weight: 600; }
+.unmatched-empty { color: #795548; font-style: italic; }
 .backup { margin: 12px 0; }
 .backup-buttons { display: flex; gap: 6px; }
 .backup-buttons .btn { margin: 6px 0; }

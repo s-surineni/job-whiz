@@ -39,7 +39,10 @@ function getFieldSelectors(platform) {
       'input[name*="city" i]',
       'input[aria-label*="city" i]',
       'input[placeholder*="city" i]',
-      'input[id*="city" i]'
+      'input[id*="city" i]',
+      'input[id*="location" i]',
+      'input[role="combobox"][aria-autocomplete="list"][id*="location" i]',
+      'input[aria-label*="location" i]'
     ],
     state: [
       'input[name*="state" i]',
@@ -94,7 +97,7 @@ function getFieldSelectors(platform) {
       email: 'input[name="email"], input[autocomplete="email"]',
       phone: 'input[name="phone"], input[autocomplete="tel"]',
       address: 'input[name="address"], input[autocomplete="street-address"]',
-      city: 'input[name="city"], input[autocomplete="address-level2"]',
+      city: 'input[name="city"], input[autocomplete="address-level2"], input[id*="location" i], input[aria-label*="location" i], input[role="combobox"][aria-autocomplete="list"][id*="location" i]',
       state: 'input[name="state"], input[autocomplete="address-level1"]',
       zip: 'input[name="postalCode"], input[autocomplete="postal-code"]',
       country: 'select[name="country"], input[name="country"]',
@@ -125,18 +128,18 @@ function getFieldSelectors(platform) {
 function findField(fieldName, selectors) {
   if (typeof selectors === 'string') {
     // Single selector string (specific platform)
-    return document.querySelector(selectors)
+    return { element: document.querySelector(selectors), selector: selectors }
   }
   
   if (Array.isArray(selectors)) {
     // Try each selector in order
     for (const selector of selectors) {
       const el = document.querySelector(selector)
-      if (el) return el
+      if (el) return { element: el, selector }
     }
   }
   
-  return null
+  return { element: null, selector: null }
 }
 
 async function fillField(field, value, delay = 0) {

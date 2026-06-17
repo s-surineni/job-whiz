@@ -12,94 +12,225 @@
     }
   })
 
+  function sendProgress(text, level = 'info') {
+    chrome.runtime.sendMessage({ type: 'FILL_PROGRESS', text, level })
+  }
+
+  const FIELD_HINTS = {
+    fullName: ['full name', 'name', 'your name', 'applicant name', 'candidate name'],
+    email: ['email', 'e-mail', 'email address'],
+    phone: ['phone', 'telephone', 'mobile', 'cell'],
+    address: ['address', 'street', 'street address', 'home address'],
+    city: ['city', 'location', 'town', 'city name', 'location (city)'],
+    state: ['state', 'province', 'region'],
+    zip: ['zip', 'postal', 'postal code', 'zip code'],
+    country: ['country', 'nation'],
+    linkedin: ['linkedin', 'linkedin url', 'linkedin profile'],
+    portfolio: ['portfolio', 'website', 'website url', 'portfolio url'],
+    headline: ['headline', 'job title', 'title', 'role'],
+    summary: ['summary', 'about', 'about you', 'description'],
+    skills: ['skills', 'skill set', 'technologies', 'expertise'],
+    workAuthorized: ['work authorized', 'legally authorized', 'work authorization', 'right to work', 'authorized to work']
+  }
+
+  function normalizeText(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  }
+
+  function getElementTextHints(element) {
+    const hints = []
+    if (element.name) hints.push(element.name)
+    if (element.id) hints.push(element.id)
+    if (element.placeholder) hints.push(element.placeholder)
+    const aria = element.getAttribute('aria-label')
+    if (aria) hints.push(aria)
+    const label = getLabelText(element)
+    if (label) hints.push(label)
+    const title = element.getAttribute('title')
+    if (title) hints.push(title)
+    const role = element.getAttribute('role')
+    if (role) hints.push(role)
+    return normalizeText(hints.join(' '))
+  }
+
+  function scoreElementForField(field, element) {
+    const text = getElementTextHints(element)
+    const hints = FIELD_HINTS[field] || []
+    let score = 0
+    for (const hint of hints) {
+      const normalized = normalizeText(hint)
+      if (text.includes(normalized)) {
+        score += 2
+      }
+    }
+    // Prefer comboboxes for location fields when a location hint exists
+    if (field === 'city' && element.getAttribute('role') === 'combobox') {
+      score += 2
+    }
+    if (field === 'workAuthorized' && element.type === 'radio') {
+      score += 2
+    }
+    if (element.tagName.toLowerCase() === 'select' && field === 'country') {
+      score += 1
+    }
+    return score
+  }
+
+  function findBestPageField(field) {
+    const candidates = Array.from(document.querySelectorAll('input, textarea, select'))
+      .filter(el => !el.disabled && el.offsetParent !== null)
+    let best = { score: 0, element: null }
+    for (const element of candidates) {
+      const score = scoreElementForField(field, element)
+      if (score > best.score) {
+        best = { score, element }
+      }
+    }
+    return best.element
+  }
+
   async function fillApplication(platform) {
     const { profiles, settings } = await getStorage()
     const profile = profiles.find(p => p.id === settings.activeProfile) || profiles[0]
     const selectors = getFieldSelectors(platform)
     const delay = settings.autoFillDelay || 300
+    const matchedElements = new Set()
+
+    sendProgress('Considering configured profile values for target page fields.', 'info')
 
     let filled = 0
+    sendProgress('Beginning form fill...', 'info')
+
     for (const [field, selectorOrArray] of Object.entries(selectors)) {
       const value = getValueFromProfile(profile, field)
-      if (!value) continue
+      const selectorText = describeSelector(selectorOrArray)
+
+      if (!value) {
+        sendProgress(`Skipping lookup for selectors: ${selectorText}. No profile value available.`, 'info')
+        continue
+      }
 
       if (field === 'workAuthorized') {
-        // Special handling for work authorization (likely radio buttons)
-        if (Array.isArray(selectorOrArray)) {
-          for (const selector of selectorOrArray) {
-            const radios = document.querySelectorAll(`${selector}`)
-            for (const radio of radios) {
-              if (radio.type === 'radio' && radio.value.toLowerCase() === value.toLowerCase()) {
-                radio.checked = true
-                radio.dispatchEvent(new Event('change', { bubbles: true }))
-                filled++
-                break
-              }
-            }
-            if (filled > 0) break
-          }
-        } else {
-          const radios = document.querySelectorAll(selectorOrArray)
-          for (const radio of radios) {
-            if (radio.type === 'radio' && radio.value.toLowerCase() === value.toLowerCase()) {
-              radio.checked = true
-              radio.dispatchEvent(new Event('change', { bubbles: true }))
-              filled++
-              break
-            }
-          }
-        }
-      } else {
-        // Regular field handling
-        let element = null
-        if (Array.isArray(selectorOrArray)) {
-          // Generic platform: try selectors in order
-          element = findField(field, selectorOrArray)
-        } else {
-          // Specific platform: use querySelector
-          element = document.querySelector(selectorOrArray)
-        }
-        
-        if (element && (!element.value && !element.textContent)) {
-          await fillField(element, value, delay)
+        sendProgress(`Looking for work authorization page field using selectors: ${selectorText}`, 'info')
+        const matchedElement = await fillWorkAuthorization(selectorOrArray, value)
+        if (matchedElement) {
+          matchedElements.add(matchedElement)
           filled++
+          const desc = describeElement(matchedElement)
+          sendProgress(`Filled target page field ${desc} with work authorization value ${value}.`, 'success')
+        } else {
+          sendProgress(`Could not find a matching work authorization page field. Selectors: ${selectorText}`, 'error')
+        }
+        continue
+      }
+
+      const lookup = findField(field, selectorOrArray)
+      let element = lookup.element
+      let matchType = 'selector'
+      let matchedSelector = lookup.selector || selectorText
+
+      if (!element) {
+        const fallback = findBestPageField(field)
+        if (fallback) {
+          element = fallback
+          matchType = 'heuristic'
+          matchedSelector = describeElement(fallback)
         }
       }
+
+      if (!element) {
+        sendProgress(`No matching page field found for selectors: ${selectorText}.`, 'error')
+        continue
+      }
+
+      matchedElements.add(element)
+
+      const pageFieldDesc = describeElement(element)
+      if (element.value || element.textContent) {
+        sendProgress(`Target page field already has a value: ${pageFieldDesc} (matched by ${matchType}).`, 'info')
+        continue
+      }
+
+      try {
+        await fillField(element, value, delay)
+        filled++
+        sendProgress(`Filled target page field ${pageFieldDesc} using selector ${matchedSelector}.`, 'success')
+      } catch (err) {
+        console.error('Fill field error:', err)
+        sendProgress(`Error filling target page field ${pageFieldDesc}: ${err.message || err}`, 'error')
+      }
     }
+
+    sendProgress(`Summary: ${filled}/${Object.keys(selectors).length} target page fields filled.`, 'info')
 
     if (profile.resume && profile.resume.data) {
       const fileInput = document.querySelector('input[type="file"]')
       if (fileInput) {
-        const blob = dataURLToBlob(profile.resume.data)
-        const file = new File([blob], profile.resume.filename, { type: 'application/pdf' })
-        const dt = new DataTransfer()
-        dt.items.add(file)
-        fileInput.files = dt.files
-        fileInput.dispatchEvent(new Event('change', { bubbles: true }))
+        try {
+          const blob = dataURLToBlob(profile.resume.data)
+          const file = new File([blob], profile.resume.filename, { type: 'application/pdf' })
+          const dt = new DataTransfer()
+          dt.items.add(file)
+          fileInput.files = dt.files
+          fileInput.dispatchEvent(new Event('change', { bubbles: true }))
+          sendProgress('Resume file attached.', 'success')
+        } catch (err) {
+          console.error('Attach resume error:', err)
+          sendProgress(`Error attaching resume: ${err.message || err}`, 'error')
+        }
       }
     }
 
-    if (settings.showNotifications) {
-      chrome.runtime.sendMessage({
-        type: 'FILL_COMPLETE',
-        fieldsFilled: filled,
-      })
+    const unmatchedPageFields = findUnmatchedFields(matchedElements)
+    chrome.runtime.sendMessage({ type: 'UNMATCHED_PAGE_FIELDS', fields: unmatchedPageFields })
+    chrome.runtime.sendMessage({
+      type: 'FILL_COMPLETE',
+      fieldsFilled: filled,
+    })
+  }
+
+  async function fillWorkAuthorization(selectorOrArray, value) {
+    if (Array.isArray(selectorOrArray)) {
+      for (const selector of selectorOrArray) {
+        const radios = document.querySelectorAll(selector)
+        for (const radio of radios) {
+          if (radio.type === 'radio' && radio.value.toLowerCase() === value.toLowerCase()) {
+            radio.checked = true
+            radio.dispatchEvent(new Event('change', { bubbles: true }))
+            return radio
+          }
+        }
+      }
+      return null
     }
+
+    const radios = document.querySelectorAll(selectorOrArray)
+    for (const radio of radios) {
+      if (radio.type === 'radio' && radio.value.toLowerCase() === value.toLowerCase()) {
+        radio.checked = true
+        radio.dispatchEvent(new Event('change', { bubbles: true }))
+        return radio
+      }
+    }
+    return null
   }
 
   function clearFilledFields(platform) {
     const selectors = getFieldSelectors(platform)
     for (const [field, selectorOrArray] of Object.entries(selectors)) {
-      let element = null
+      let lookup
       if (Array.isArray(selectorOrArray)) {
-        element = findField(field, selectorOrArray)
+        lookup = findField(field, selectorOrArray)
       } else {
-        element = document.querySelector(selectorOrArray)
+        lookup = { element: document.querySelector(selectorOrArray), selector: selectorOrArray }
       }
       
+      const element = lookup.element
       if (element) {
         if (element.tagName.toLowerCase() === 'select') {
           element.selectedIndex = 0
+        } else if (element.type === 'checkbox' || element.type === 'radio') {
+          element.checked = false
         } else {
           element.value = ''
         }
@@ -130,6 +261,69 @@
       workAuthorized: personal.workAuthorized,
     }
     return map[field]
+  }
+
+  function describeSelector(selectorOrArray) {
+    if (Array.isArray(selectorOrArray)) {
+      return selectorOrArray.join(' | ')
+    }
+    return selectorOrArray || '[unknown selector]'
+  }
+
+  function describeElement(element) {
+    if (!element) return '[unknown page field]'
+    const parts = [element.tagName.toLowerCase()]
+    if (element.type) parts.push(`type=${element.type}`)
+    if (element.id) parts.push(`id=${element.id}`)
+    if (element.name) parts.push(`name=${element.name}`)
+    if (element.placeholder) parts.push(`placeholder=${element.placeholder}`)
+    const aria = element.getAttribute('aria-label')
+    if (aria) parts.push(`aria-label=${aria}`)
+    const label = getLabelText(element)
+    if (label) parts.push(`label="${label}"`)
+    return parts.join(' ')
+  }
+
+  function getLabelText(element) {
+    if (!element) return ''
+    let label = ''
+    if (element.id) {
+      const labelEl = document.querySelector(`label[for="${CSS.escape(element.id)}"]`)
+      if (labelEl) label = labelEl.textContent.trim()
+    }
+    if (!label) {
+      const parentLabel = element.closest('label')
+      if (parentLabel) label = parentLabel.textContent.trim()
+    }
+    return label.replace(/\s+/g, ' ').trim()
+  }
+
+  function getBestFieldHint(element) {
+    let bestScore = 0
+    let bestField = null
+    for (const field of Object.keys(FIELD_HINTS)) {
+      const score = scoreElementForField(field, element)
+      if (score > bestScore) {
+        bestScore = score
+        bestField = field
+      }
+    }
+    return { bestField, score: bestScore }
+  }
+
+  function findUnmatchedFields(matchedElements) {
+    const candidates = Array.from(document.querySelectorAll('input, textarea, select'))
+      .filter(el => !el.disabled && el.offsetParent !== null)
+
+    const results = []
+    for (const element of candidates) {
+      if (matchedElements.has(element)) continue
+      const { bestField, score } = getBestFieldHint(element)
+      if (score >= 2) {
+        results.push({ descriptor: describeElement(element), bestField, score })
+      }
+    }
+    return results
   }
 
   function dataURLToBlob(dataURL) {

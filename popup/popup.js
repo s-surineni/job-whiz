@@ -42,6 +42,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   })
   document.getElementById('importFile').addEventListener('change', onImportProfiles)
 
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'FILL_PROGRESS') {
+      appendProgress(message.text, message.level)
+    }
+    if (message.type === 'FILL_COMPLETE') {
+      setStatus(`${message.fieldsFilled} fields filled`, '#2e7d32')
+      appendProgress(`Fill complete: ${message.fieldsFilled} fields filled`, 'success')
+    }
+    if (message.type === 'FILL_ERROR') {
+      setStatus('Error filling form', '#d32f2f')
+      appendProgress(message.error, 'error')
+    }
+    if (message.type === 'UNMATCHED_PAGE_FIELDS') {
+      renderUnmatchedFields(message.fields)
+    }
+  })
+
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
@@ -174,12 +191,16 @@ async function onSaveProfile() {
 }
 
 async function onFillForm() {
+  clearProgress()
+  clearUnmatchedFields()
+  appendProgress('Starting fill process...', 'info')
   setStatus('Filling application...', '#f57c00')
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   try {
     await chrome.tabs.sendMessage(tab.id, { type: 'FILL_JOB_APPLICATION' })
   } catch (e) {
     setStatus('Refresh page and try again', '#d32f2f')
+    appendProgress('Unable to send fill request to the page.', 'error')
   }
 }
 
@@ -243,6 +264,46 @@ function setStatus(msg, color) {
   el.textContent = msg
   el.style.color = color || '#888'
   setTimeout(() => { el.textContent = '' }, 3000)
+}
+
+function clearProgress() {
+  const list = document.getElementById('progressList')
+  if (!list) return
+  list.innerHTML = '<div class="progress-empty">Click Fill Application to see progress here.</div>'
+}
+
+function appendProgress(text, level = 'info') {
+  const list = document.getElementById('progressList')
+  if (!list) return
+  const empty = list.querySelector('.progress-empty')
+  if (empty) empty.remove()
+  const item = document.createElement('div')
+  item.className = `progress-item ${level}`
+  item.textContent = text
+  list.appendChild(item)
+  list.scrollTop = list.scrollHeight
+}
+
+function clearUnmatchedFields() {
+  const list = document.getElementById('unmatchedList')
+  if (!list) return
+  list.innerHTML = '<div class="unmatched-empty">Fields not matched on the page will appear here.</div>'
+}
+
+function renderUnmatchedFields(fields) {
+  const list = document.getElementById('unmatchedList')
+  if (!list) return
+  list.innerHTML = ''
+  if (!fields || fields.length === 0) {
+    list.innerHTML = '<div class="unmatched-empty">No unmatched page fields found.</div>'
+    return
+  }
+  for (const field of fields) {
+    const item = document.createElement('div')
+    item.className = 'unmatched-item'
+    item.innerHTML = `<span class="unmatched-field">${field.descriptor}</span> <br><small>Best match: ${field.bestField || 'unknown'} (${field.score})</small>`
+    list.appendChild(item)
+  }
 }
 
 async function onExportProfiles() {
