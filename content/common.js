@@ -122,6 +122,7 @@ function getFieldSelectors(platform) {
       headline: 'input[name="headline"]',
       summary: 'textarea[name="summary"], div[contenteditable="true"][aria-label*="summary"i]',
       skills: 'input[name="skills"]',
+      workAuthorized: 'input[type="radio"][name*="work" i], input[type="radio"][name*="author" i], select[name*="work" i], select[name*="author" i], input[type="checkbox"][name*="work" i], input[aria-label*="legally" i], input[aria-label*="work" i]',
     },
     indeed: {
       firstName: 'input[name="firstName"], input[data-testid="firstName"]',
@@ -134,6 +135,7 @@ function getFieldSelectors(platform) {
       state: 'input[name="state"], input[data-testid="state"]',
       zip: 'input[name="zip"], input[data-testid="postalCode"]',
       country: 'select[name="country"], select[data-testid="country"]',
+      workAuthorized: 'input[type="radio"][name*="work" i], input[type="radio"][name*="author" i], select[name*="work" i], select[name*="author" i], input[type="checkbox"][name*="work" i], input[aria-label*="legally" i], input[aria-label*="work" i]',
     },
   }
 
