@@ -1,19 +1,21 @@
-function detectPlatform() {
-  const host = window.location.hostname
-  if (host.includes('linkedin.com')) return 'linkedin'
-  if (host.includes('indeed.com')) return 'indeed'
-  return 'generic'
+export function detectPlatform(): string {
+  const host = window.location.hostname;
+  if (host.includes('linkedin.com')) return 'linkedin';
+  if (host.includes('indeed.com')) return 'indeed';
+  return 'generic';
 }
 
-function getFieldSelectors(platform) {
-  const commonSelectors = {
+export function getFieldSelectors(
+  platform: string,
+): Record<string, string | string[]> {
+  const commonSelectors: Record<string, string[]> = {
     firstName: [
       'input[name*="firstName" i][type="text"]',
       'input[name*="first" i][type="text"]',
       'input[aria-label*="first name" i]',
       'input[placeholder*="first name" i]',
       'input[id*="firstName" i]',
-      'input[id*="first-name" i]'
+      'input[id*="first-name" i]',
     ],
     lastName: [
       'input[name*="lastName" i][type="text"]',
@@ -21,21 +23,21 @@ function getFieldSelectors(platform) {
       'input[aria-label*="last name" i]',
       'input[placeholder*="last name" i]',
       'input[id*="lastName" i]',
-      'input[id*="last-name" i]'
+      'input[id*="last-name" i]',
     ],
     fullName: [
       'input[name*="name" i][type="text"]',
       'input[aria-label*="name" i]',
       'input[placeholder*="name" i]',
       'input[name*="full" i]',
-      'input[id*="name" i]'
+      'input[id*="name" i]',
     ],
     email: [
       'input[type="email"]',
       'input[name*="email" i]',
       'input[aria-label*="email" i]',
       'input[placeholder*="email" i]',
-      'input[id*="email" i]'
+      'input[id*="email" i]',
     ],
     phone: [
       'input[type="tel"]',
@@ -43,13 +45,13 @@ function getFieldSelectors(platform) {
       'input[name*="mobile" i]',
       'input[aria-label*="phone" i]',
       'input[placeholder*="phone" i]',
-      'input[id*="phone" i]'
+      'input[id*="phone" i]',
     ],
     address: [
       'input[name*="address" i]',
       'input[aria-label*="address" i]',
       'input[placeholder*="address" i]',
-      'input[id*="address" i]'
+      'input[id*="address" i]',
     ],
     city: [
       'input[name*="city" i]',
@@ -58,43 +60,43 @@ function getFieldSelectors(platform) {
       'input[id*="city" i]',
       'input[id*="location" i]',
       'input[role="combobox"][aria-autocomplete="list"][id*="location" i]',
-      'input[aria-label*="location" i]'
+      'input[aria-label*="location" i]',
     ],
     state: [
       'input[name*="state" i]',
       'input[name*="province" i]',
       'input[aria-label*="state" i]',
       'input[placeholder*="state" i]',
-      'input[id*="state" i]'
+      'input[id*="state" i]',
     ],
     zip: [
       'input[name*="zip" i]',
       'input[name*="postal" i]',
       'input[aria-label*="zip" i]',
       'input[placeholder*="zip" i]',
-      'input[id*="zip" i]'
+      'input[id*="zip" i]',
     ],
     country: [
       'select[name*="country" i]',
       'input[name*="country" i]',
       'input[aria-label*="country" i]',
-      'input[id*="country" i]'
+      'input[id*="country" i]',
     ],
     headline: [
       'input[name*="headline" i]',
       'input[name*="title" i]',
-      'input[aria-label*="headline" i]'
+      'input[aria-label*="headline" i]',
     ],
     summary: [
       'textarea[name*="summary" i]',
       'textarea[name*="about" i]',
       'textarea[aria-label*="summary" i]',
-      'div[contenteditable="true"][aria-label*="summary" i]'
+      'div[contenteditable="true"][aria-label*="summary" i]',
     ],
     skills: [
       'input[name*="skills" i]',
       'textarea[name*="skills" i]',
-      'input[aria-label*="skills" i]'
+      'input[aria-label*="skills" i]',
     ],
     workAuthorized: [
       'input[type="radio"][name*="work" i]',
@@ -103,14 +105,15 @@ function getFieldSelectors(platform) {
       'select[name*="author" i]',
       'input[type="checkbox"][name*="work" i]',
       'input[aria-label*="legally" i]',
-      'input[aria-label*="work" i]'
-    ]
-  }
+      'input[aria-label*="work" i]',
+    ],
+  };
 
-  const platformSpecific = {
+  const platformSpecific: Record<string, Record<string, string>> = {
     linkedin: {
       firstName: 'input[name="firstName"], input[autocomplete="given-name"]',
-      lastName: 'input[name="lastName"], input[autocomplete="family-name"]',
+      lastName:
+        'input[name="lastName"], input[autocomplete="family-name"]',
       fullName: 'input[name="fullName"], input[autocomplete="name"]',
       email: 'input[name="email"], input[autocomplete="email"]',
       phone: 'input[name="phone"], input[autocomplete="tel"]',
@@ -120,9 +123,11 @@ function getFieldSelectors(platform) {
       zip: 'input[name="postalCode"], input[autocomplete="postal-code"]',
       country: 'select[name="country"], input[name="country"]',
       headline: 'input[name="headline"]',
-      summary: 'textarea[name="summary"], div[contenteditable="true"][aria-label*="summary"i]',
+      summary:
+        'textarea[name="summary"], div[contenteditable="true"][aria-label*="summary"i]',
       skills: 'input[name="skills"]',
-      workAuthorized: 'input[type="radio"][name*="work" i], input[type="radio"][name*="author" i], select[name*="work" i], select[name*="author" i], input[type="checkbox"][name*="work" i], input[aria-label*="legally" i], input[aria-label*="work" i]',
+      workAuthorized:
+        'input[type="radio"][name*="work" i], input[type="radio"][name*="author" i], select[name*="work" i], select[name*="author" i], input[type="checkbox"][name*="work" i], input[aria-label*="legally" i], input[aria-label*="work" i]',
     },
     indeed: {
       firstName: 'input[name="firstName"], input[data-testid="firstName"]',
@@ -135,74 +140,95 @@ function getFieldSelectors(platform) {
       state: 'input[name="state"], input[data-testid="state"]',
       zip: 'input[name="zip"], input[data-testid="postalCode"]',
       country: 'select[name="country"], select[data-testid="country"]',
-      workAuthorized: 'input[type="radio"][name*="work" i], input[type="radio"][name*="author" i], select[name*="work" i], select[name*="author" i], input[type="checkbox"][name*="work" i], input[aria-label*="legally" i], input[aria-label*="work" i]',
+      workAuthorized:
+        'input[type="radio"][name*="work" i], input[type="radio"][name*="author" i], select[name*="work" i], select[name*="author" i], input[type="checkbox"][name*="work" i], input[aria-label*="legally" i], input[aria-label*="work" i]',
     },
-  }
+  };
 
   if (platformSpecific[platform]) {
-    return platformSpecific[platform]
+    return platformSpecific[platform];
   }
-  
-  // For generic platform, return selector arrays
-  return commonSelectors
+
+  return commonSelectors;
 }
 
-function findField(fieldName, selectors) {
+export function findField(
+  fieldName: string,
+  selectors: string | string[],
+): { element: HTMLElement | null; selector: string | null } {
   if (typeof selectors === 'string') {
-    // Single selector string (specific platform)
-    return { element: document.querySelector(selectors), selector: selectors }
+    return {
+      element: document.querySelector(selectors),
+      selector: selectors,
+    };
   }
-  
+
   if (Array.isArray(selectors)) {
-    // Try each selector in order
     for (const selector of selectors) {
-      const el = document.querySelector(selector)
-      if (el) return { element: el, selector }
+      const el = document.querySelector(selector);
+      if (el) return { element: el as HTMLElement, selector };
     }
   }
-  
-  return { element: null, selector: null }
+
+  return { element: null, selector: null };
 }
 
-async function fillField(field, value, delay = 0) {
-  if (!field || value === undefined || value === null) return
-  return new Promise(resolve => {
+export async function fillField(
+  field: HTMLElement,
+  value: string,
+  delay = 0,
+): Promise<void> {
+  if (!field || value === undefined || value === null) return;
+  return new Promise((resolve) => {
     setTimeout(() => {
-      const tag = field.tagName.toLowerCase()
-      const type = field.type ? field.type.toLowerCase() : ''
-      
+      const tag = field.tagName.toLowerCase();
+      const type = (field as HTMLInputElement).type
+        ? (field as HTMLInputElement).type.toLowerCase()
+        : '';
+
       if (type === 'radio') {
-        // For radio buttons, find the matching value
-        const allRadios = document.querySelectorAll(`input[type="radio"][name="${field.name}"]`)
+        const allRadios = document.querySelectorAll(
+          `input[type="radio"][name="${(field as HTMLInputElement).name}"]`,
+        );
         for (const radio of allRadios) {
-          if (radio.value.toLowerCase() === value.toLowerCase()) {
-            radio.checked = true
-            radio.dispatchEvent(new Event('change', { bubbles: true }))
-            break
+          if (
+            (radio as HTMLInputElement).value.toLowerCase() ===
+            value.toLowerCase()
+          ) {
+            (radio as HTMLInputElement).checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+            break;
           }
         }
       } else if (type === 'checkbox') {
-        // For checkboxes, check if value matches yes/true
-        if (value.toLowerCase() === 'yes' || value.toLowerCase() === 'true') {
-          field.checked = true
-        } else if (value.toLowerCase() === 'no' || value.toLowerCase() === 'false') {
-          field.checked = false
+        if (
+          value.toLowerCase() === 'yes' ||
+          value.toLowerCase() === 'true'
+        ) {
+          (field as HTMLInputElement).checked = true;
+        } else if (
+          value.toLowerCase() === 'no' ||
+          value.toLowerCase() === 'false'
+        ) {
+          (field as HTMLInputElement).checked = false;
         }
-        field.dispatchEvent(new Event('change', { bubbles: true }))
+        field.dispatchEvent(new Event('change', { bubbles: true }));
       } else if (tag === 'select') {
-        const option = Array.from(field.options).find(
-          o => o.value.toLowerCase() === value.toLowerCase()
-            || o.text.toLowerCase() === value.toLowerCase()
-        )
-        if (option) field.value = option.value
-      } else if (field.isContentEditable) {
-        field.textContent = value
+        const select = field as HTMLSelectElement;
+        const option = Array.from(select.options).find(
+          (o) =>
+            o.value.toLowerCase() === value.toLowerCase() ||
+            o.text.toLowerCase() === value.toLowerCase(),
+        );
+        if (option) select.value = option.value;
+      } else if ((field as HTMLElement).isContentEditable) {
+        field.textContent = value;
       } else {
-        field.value = value
+        (field as HTMLInputElement).value = value;
       }
-      field.dispatchEvent(new Event('input', { bubbles: true }))
-      field.dispatchEvent(new Event('change', { bubbles: true }))
-      resolve()
-    }, delay)
-  })
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+      resolve();
+    }, delay);
+  });
 }

@@ -1,0 +1,24 @@
+{
+  "name": "Job Whiz",
+  "version": "1.0.0",
+  "description": "Auto-fill job applications on LinkedIn, Indeed, and more with your saved profile",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "postbuild": "wxt prepare",
+    "zip": "wxt zip",
+    "gen": "wxt prepare"
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/s-surineni/job-whiz.git"
+  },
+  "bugs": {
+    "url": "https://github.com/s-surineni/job-whiz/issues"
+  },
+  "homepage": "https://github.com/s-surineni/job-whiz#readme",
+  "devDependencies": {
+    "wxt": "^0.21.0"
+  }
+}

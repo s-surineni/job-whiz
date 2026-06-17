@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Whiz</title>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Job Whiz</h1>
+        <span class="platform-badge" id="platformBadge">Idle</span>
+      </header>
+
+      <section class="profile-section">
+        <div class="section-header">
+          <h2>Profile</h2>
+          <select id="profileSelect"></select>
+        </div>
+        <div class="tabs">
+          <button class="tab active" data-tab="personal">Personal</button>
+          <button class="tab" data-tab="professional">Professional</button>
+          <button class="tab" data-tab="employment">Employment</button>
+          <button class="tab" data-tab="education">Education</button>
+        </div>
+
+        <div class="tab-content active" id="tab-personal">
+          <div class="row">
+            <label>First Name <input type="text" id="firstName" /></label>
+            <label>Last Name <input type="text" id="lastName" /></label>
+          </div>
+          <label>Email <input type="email" id="email" /></label>
+          <label>Phone <input type="tel" id="phone" /></label>
+          <label>Address <input type="text" id="address" /></label>
+          <div class="row">
+            <label>City <input type="text" id="city" /></label>
+            <label>State <input type="text" id="state" /></label>
+            <label>Zip <input type="text" id="zip" /></label>
+          </div>
+          <label>LinkedIn URL <input type="url" id="linkedin" /></label>
+          <label>Portfolio <input type="url" id="portfolio" /></label>
+          <label
+            >Legally authorized to work?
+            <select id="workAuthorized">
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="tab-content" id="tab-professional">
+          <label>Headline <input type="text" id="headline" /></label>
+          <label
+            >Summary <textarea id="summary" rows="3"></textarea
+          ></label>
+          <label
+            >Skills (comma separated) <textarea id="skills" rows="3"></textarea
+          ></label>
+        </div>
+
+        <div class="tab-content" id="tab-employment">
+          <div id="employmentList"></div>
+          <button class="btn secondary" id="addEmployment">
+            + Add Employment
+          </button>
+        </div>
+
+        <div class="tab-content" id="tab-education">
+          <div id="educationList"></div>
+          <button class="btn secondary" id="addEducation">
+            + Add Education
+          </button>
+        </div>
+
+        <button class="btn primary" id="saveProfile">Save Profile</button>
+      </section>
+
+      <section class="actions">
+        <button class="btn primary" id="fillForm">Fill Application</button>
+        <button class="btn secondary" id="clearForm">Clear Fields</button>
+      </section>
+
+      <section class="settings">
+        <h2>Settings</h2>
+        <label>
+          Auto-fill delay (ms)
+          <input
+            type="number"
+            id="autoFillDelay"
+            min="0"
+            max="3000"
+            value="300"
+          />
+        </label>
+      </section>
+
+      <section class="progress-section">
+        <h2>Fill Progress</h2>
+        <div id="progressList" class="progress-log">
+          <div class="progress-empty">
+            Click Fill Application to see progress here.
+          </div>
+        </div>
+      </section>
+
+      <section class="unmatched-section">
+        <h2>Unmatched Page Fields</h2>
+        <div id="unmatchedList" class="unmatched-list">
+          <div class="unmatched-empty">
+            Fields not matched on the page will appear here.
+          </div>
+        </div>
+      </section>
+
+      <section class="backup">
+        <h2>Backup</h2>
+        <div class="backup-buttons">
+          <button class="btn secondary" id="exportProfiles">
+            Export Profiles
+          </button>
+          <button class="btn secondary" id="importProfiles">
+            Import Profiles
+          </button>
+          <input
+            type="file"
+            id="importFile"
+            accept=".json"
+            style="display: none"
+          />
+        </div>
+      </section>
+
+      <footer>
+        <span id="status"></span>
+      </footer>
+    </div>
+  </body>
+</html>
