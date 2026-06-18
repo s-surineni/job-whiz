@@ -41,6 +41,18 @@ npm run dev
 
 This opens a new Chrome window with the extension loaded. Changes to source files will hot-reload automatically.
 
+### Test Hot Reload
+
+1. Run `npm run dev`
+2. Click the extension icon to open the popup
+3. Edit `entrypoints/popup/style.css` — change the `h1` color to `red`
+4. Save the file
+5. The popup header color changes instantly without closing/reopening
+
+You can also test with JavaScript — add a `console.log('[HMR test]')` to `entrypoints/popup/main.ts`, save, and check the popup console (right-click popup → Inspect popup → Console).
+
+**Note:** HMR requires the Chrome window opened by `npm run dev`. If you manually load the extension, use `npm run build` and reload instead.
+
 ### Build for Production
 
 ```bash
