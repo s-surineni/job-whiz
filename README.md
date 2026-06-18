@@ -9,6 +9,7 @@ Chrome extension that auto-fills job applications using your saved profile.
 - Extensible for custom sites
 - Local storage only — your data stays on your machine
 - Multiple profile support
+- Backup and restore profiles via JSON export/import
 
 ## Usage
 
@@ -19,8 +20,80 @@ Chrome extension that auto-fills job applications using your saved profile.
 
 ## Development
 
-Load as an unpacked extension in Chrome:
-1. Go to `chrome://extensions`
-2. Enable Developer mode
-3. Click "Load unpacked"
-4. Select the `job-whiz` directory
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+)
+- [Google Chrome](https://www.google.com/chrome/)
+
+### Setup
+
+```bash
+npm install
+```
+
+### Run in Development Mode
+
+Start the dev server with hot reload:
+
+```bash
+npm run dev
+```
+
+This opens a new Chrome window with the extension loaded. Changes to source files will hot-reload automatically.
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+The built extension is output to `.output/chrome-mv3/`.
+
+### Load the Extension Manually
+
+To test the extension in your existing Chrome session:
+
+1. Go to `chrome://extensions/`
+2. Enable **Developer mode** (top right toggle)
+3. Click **Load unpacked**
+4. Select the `.output/chrome-mv3/` folder from the project directory
+5. The extension icon will appear in your toolbar
+
+### Reload After Changes
+
+After making changes, run `npm run build` again, then click the **reload** icon on the extension card in `chrome://extensions/`.
+
+### Debug the Popup
+
+1. Click the extension icon in the toolbar to open the popup
+2. Right-click the popup and select **"Inspect popup"**
+3. Use the Console tab in DevTools to view logs and errors
+
+### Zip for Distribution
+
+```bash
+npm run zip
+```
+
+Creates a `.zip` file in `.output/` ready for Chrome Web Store upload.
+
+## Project Structure
+
+```
+├── wxt.config.ts                # WXT configuration (manifest overrides)
+├── entrypoints/
+│   ├── background.ts            # Service worker (onInstalled, badge)
+│   ├── content.ts               # Content script (matches https://*/*)
+│   └── popup/
+│       ├── index.html           # Popup HTML
+│       ├── main.ts              # Popup logic
+│       └── style.css            # Popup styles
+├── utils/
+│   ├── storage.ts               # Chrome storage helpers
+│   ├── common.ts                # Platform detection, field selectors
+│   ├── filler.ts                # Form filling logic
+│   └── platforms/
+│       ├── indeed.ts            # Indeed-specific selectors
+│       └── linkedin.ts          # LinkedIn-specific selectors
+└── public/
+    └── icons/                   # Extension icons
