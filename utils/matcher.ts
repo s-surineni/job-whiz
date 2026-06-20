@@ -25,11 +25,11 @@ const AUTOCOMPLETE_MAP: Record<string, string[]> = {
 
 /** Text hints for heuristic matching (used when autocomplete is not available) */
 const FIELD_HINTS: Record<string, string[]> = {
-  firstName: ['first name', 'given name', 'first'],
-  lastName: ['last name', 'surname', 'family name', 'last'],
+  firstName: ['first name', 'given name', 'first', 'preferred first'],
+  lastName: ['last name', 'surname', 'family name', 'last', 'preferred last'],
   fullName: ['full name', 'name', 'your name', 'applicant name', 'candidate name'],
-  email: ['email', 'e-mail', 'email address'],
-  phone: ['phone', 'telephone', 'mobile', 'cell'],
+  email: ['email', 'e-mail', 'email address', 'contact email'],
+  phone: ['phone', 'telephone', 'mobile', 'cell', 'contact number'],
   address: ['address', 'street', 'street address', 'home address'],
   city: ['city', 'location', 'town', 'city name'],
   state: ['state', 'province', 'region'],
@@ -38,9 +38,9 @@ const FIELD_HINTS: Record<string, string[]> = {
   headline: ['headline', 'job title', 'title', 'role'],
   summary: ['summary', 'about', 'about you', 'description'],
   skills: ['skills', 'skill set', 'technologies', 'expertise'],
-  workAuthorized: ['work authorized', 'legally authorized', 'work authorization', 'right to work'],
-  linkedin: ['linkedin', 'linkedin url', 'linkedin profile'],
-  portfolio: ['portfolio', 'website', 'website url'],
+  workAuthorized: ['work authorized', 'legally authorized', 'work authorization', 'right to work', 'sponsor', 'sponsorship', 'work from office', 'remote', 'work location'],
+  linkedin: ['linkedin', 'linkedin url', 'linkedin profile', 'linked in'],
+  portfolio: ['portfolio', 'website', 'website url', 'personal website'],
 };
 
 function normalizeText(text: string): string {
@@ -230,7 +230,9 @@ export function findUnmatchedPageFields(
       }
     }
 
-    if (bestScore >= 20) {
+    // Include any candidate with a reasonable heuristic match.
+    // Lowering threshold from 20 -> 10 so more potential unmatched fields are reported.
+    if (bestScore >= 10) {
       results.push({
         descriptor: describeElement(element as HTMLElement),
         bestField,

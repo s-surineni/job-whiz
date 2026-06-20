@@ -129,6 +129,8 @@ function loadProfileIntoForm() {
   setVal('state', p.state);
   setVal('zip', p.zip);
   setVal('linkedin', p.linkedin);
+  // Support alternate LinkedIn input used by some sites
+  setVal('socialNetworkAccounts--linkedInAccount', p.linkedin);
   setVal('portfolio', p.portfolio);
   setVal('workAuthorized', p.workAuthorized || 'yes');
 
@@ -234,6 +236,8 @@ async function onSaveProfile() {
     state: getVal('state'),
     zip: getVal('zip'),
     linkedin: getVal('linkedin'),
+    // If alternate input populated, prefer it
+    linkedin: getVal('socialNetworkAccounts--linkedInAccount') || getVal('linkedin'),
     portfolio: getVal('portfolio'),
     website: '',
     country: 'US',

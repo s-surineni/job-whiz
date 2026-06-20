@@ -110,7 +110,7 @@ export async function fillApplication(platform?: string): Promise<void> {
 
     if (field === 'workAuthorized') {
       sendProgress(
-        `Looking for work authorization field using selectors: ${selectorText}`,
+        `Looking for work authorization field.`,
         'info',
       );
       const matchedElement = await fillWorkAuthorization(selectorOrArray, value);
@@ -122,10 +122,7 @@ export async function fillApplication(platform?: string): Promise<void> {
           'success',
         );
       } else {
-        sendProgress(
-          `Could not find work authorization field. Selectors: ${selectorText}`,
-          'error',
-        );
+          console.debug('Could not find work authorization field.');
       }
       continue;
     }
@@ -138,17 +135,14 @@ export async function fillApplication(platform?: string): Promise<void> {
     // Fallback: use the new weighted matcher (autocomplete + heuristics)
     if (!element) {
       const result = findBestField(field);
-      if (result.element && result.score >= 10) {
-        element = result.element;
-        matchType = result.matchType;
-      }
+    if (result.element && result.score >= 5) {
+      element = result.element;
+      matchType = result.matchType;
+    }
     }
 
     if (!element) {
-      sendProgress(
-        `No matching field found for "${field}". Selectors: ${selectorText}`,
-        'error',
-      );
+      console.debug(`No matching field found for ${field || '[unknown]'}`);
       continue;
     }
 
@@ -159,7 +153,7 @@ export async function fillApplication(platform?: string): Promise<void> {
       element.textContent
     ) {
       sendProgress(
-        `Field "${field}" already has a value (matched by ${matchType}).`,
+        `A matching field already has a value (matched by ${matchType}).`,
         'info',
       );
       continue;
@@ -214,6 +208,8 @@ export async function fillApplication(platform?: string): Promise<void> {
 
   // Report unmatched fields
   const unmatchedPageFields = findUnmatchedPageFields(matchedElements);
+  sendProgress(`Unmatched page fields: ${unmatchedPageFields.length}`, 'info');
+  console.debug('UNMATCHED_PAGE_FIELDS payload:', unmatchedPageFields);
   chrome.runtime.sendMessage({
     type: 'UNMATCHED_PAGE_FIELDS',
     fields: unmatchedPageFields,
