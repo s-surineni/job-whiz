@@ -20,6 +20,10 @@ Chrome extension that auto-fills job applications using your saved profile.
 
 ## Development
 
+### Recent fix
+
+- Added support for filling application forms hosted inside same-origin iframes by injecting the fill routine into all accessible frames.
+
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v18+)

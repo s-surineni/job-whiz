@@ -1,6 +1,7 @@
 import { getStorage, saveProfiles, saveSettings, DEFAULT_PROFILE } from '../../utils/storage';
 import type { Profile, Settings } from '../../utils/storage';
 import { esc, setVal, getVal, debounce } from '../../utils/helpers';
+import { detectPlatform, getFieldSelectors } from '../../utils/common';
 import './style.css';
 
 let currentProfile: Profile | null = null;
@@ -81,6 +82,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (message.type === 'FILL_ERROR') {
       setStatus('Error filling form', '#d32f2f');
       appendProgress(message.error, 'error');
+    }
+    if (message.type === 'FILL_DIAGNOSTIC') {
+      try {
+        const p = message.payload || {};
+        appendDiagnostic(`Frame: ${p.frame}; URL: ${p.url}`, 'info');
+        appendDiagnostic(`Controls: ${p.visibleControls}/${p.totalControls}; contenteditable: ${p.visibleContenteditableCount}/${p.contenteditableCount}`, 'info');
+        appendDiagnostic(`Iframes: ${p.iframeCount}; accessible same-origin frames: ${p.accessibleSameOriginFrames}`, 'info');
+        if (Array.isArray(p.sameOriginFrameUrls) && p.sameOriginFrameUrls.length) {
+          appendDiagnostic(`Same-origin frame URLs: ${p.sameOriginFrameUrls.join(', ')}`, 'info');
+        }
+        appendDiagnostic(`Profile values: ${Array.isArray(p.profileFieldsWithValues) ? p.profileFieldsWithValues.length : 0} / ${p.selectorsSearched}`, 'info');
+        if (Array.isArray(p.profileFieldsWithValues) && p.profileFieldsWithValues.length) {
+          appendDiagnostic(`Fields with values: ${p.profileFieldsWithValues.join(', ')}`, 'info');
+        }
+        console.debug('FILL_DIAGNOSTIC:', p);
+      } catch (e) {
+        console.debug('Malformed diagnostic message', message);
+      }
     }
     if (message.type === 'UNMATCHED_PAGE_FIELDS') {
       renderUnmatchedFields(message.fields);
@@ -229,15 +248,143 @@ async function onSaveProfile() {
 
 async function onFillForm() {
   clearProgress();
+  clearDiagnostics();
   clearUnmatchedFields();
   appendProgress('Starting fill process...', 'info');
   setStatus('Filling application...', '#f57c00');
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) {
+    setStatus('No active tab found', '#d32f2f');
+    appendProgress('Unable to send fill request to the page: no active tab.', 'error');
+    return;
+  }
+  if (!tab.url || !/^https?:/.test(tab.url)) {
+    setStatus('Open a job site page and try again', '#d32f2f');
+    appendProgress('Unable to send fill request to the page: unsupported page URL.', 'error');
+    return;
+  }
+
   try {
-    await chrome.tabs.sendMessage(tab.id!, { type: 'FILL_JOB_APPLICATION' });
-  } catch (e) {
+    appendProgress('Injecting fill routine into all frames...', 'info');
+    const storage = await getStorage();
+    const profiles = storage.profiles as Profile[];
+    const setts = storage.settings as Settings;
+    const active = profiles.find((p) => p.id === setts.activeProfile) || profiles[0];
+    const platform = detectPlatform();
+    const selectors = getFieldSelectors(platform);
+    const fieldValues: Record<string, any> = {};
+    for (const k of Object.keys(selectors)) {
+      const personal = (active.personal || {}) as any;
+      const professional = (active.professional || {}) as any;
+      const map: Record<string, any> = {
+        firstName: personal.firstName,
+        lastName: personal.lastName,
+        fullName: `${personal.firstName || ''} ${personal.lastName || ''}`.trim(),
+        email: personal.email,
+        phone: personal.phone,
+        address: personal.address,
+        city: personal.city,
+        state: personal.state,
+        zip: personal.zip,
+        country: personal.country,
+        linkedin: personal.linkedin,
+        portfolio: personal.portfolio,
+        website: personal.website,
+        headline: professional.headline,
+        summary: professional.summary,
+        skills: Array.isArray(professional.skills) ? professional.skills.join(', ') : '',
+        workAuthorized: personal.workAuthorized,
+      };
+      fieldValues[k] = map[k] || '';
+    }
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id!, allFrames: true },
+      func: (fieldValuesArg: Record<string, any>, selectorsArg: Record<string, any>, delayArg: number) => {
+        const toArray = (s: any) => (Array.isArray(s) ? s : [s]);
+        const dispatchEvent = (el: Element, evName: string) => el.dispatchEvent(new Event(evName, { bubbles: true }));
+        const sendProgress = (text: string, level = 'info') => {
+          try {
+            chrome.runtime.sendMessage({ type: 'FILL_PROGRESS', text, level });
+          } catch (e) {
+            // ignore
+          }
+        };
+        const findElement = (selector: any): HTMLElement | null => {
+          const candidates = toArray(selector);
+          for (const s of candidates) {
+            try {
+              const el = document.querySelector(s) as HTMLElement | null;
+              if (el) return el;
+            } catch {
+              continue;
+            }
+          }
+          return null;
+        };
+        let filled = 0;
+        for (const field of Object.keys(selectorsArg || {})) {
+          const value = fieldValuesArg[field];
+          if (!value) {
+            sendProgress(`Skipping "${field}": no profile value available.`, 'info');
+            continue;
+          }
+          const element = findElement(selectorsArg[field]);
+          if (!element) {
+            sendProgress(`No matching field found for ${field}`, 'info');
+            continue;
+          }
+          const tag = element.tagName.toLowerCase();
+          const type = (element as HTMLInputElement).type || '';
+          try {
+            if (type === 'radio') {
+              const allRadios = document.querySelectorAll(`input[type="radio"][name="${(element as HTMLInputElement).name}"]`);
+              for (const radio of Array.from(allRadios)) {
+                if ((radio as HTMLInputElement).value.toLowerCase() === String(value).toLowerCase()) {
+                  (radio as HTMLInputElement).checked = true;
+                  dispatchEvent(radio, 'change');
+                  break;
+                }
+              }
+            } else if (type === 'checkbox') {
+              (element as HTMLInputElement).checked = (String(value).toLowerCase() === 'yes' || String(value).toLowerCase() === 'true');
+              dispatchEvent(element, 'change');
+            } else if (tag === 'select') {
+              const select = element as HTMLSelectElement;
+              const opt = Array.from(select.options).find((o) =>
+                o.value.toLowerCase() === String(value).toLowerCase() ||
+                o.text.toLowerCase() === String(value).toLowerCase(),
+              );
+              if (opt) select.value = opt.value;
+              dispatchEvent(select, 'change');
+            } else if ((element as HTMLElement).isContentEditable) {
+              element.textContent = String(value);
+              dispatchEvent(element, 'input');
+              dispatchEvent(element, 'change');
+            } else {
+              (element as HTMLInputElement).value = String(value);
+              dispatchEvent(element, 'input');
+              dispatchEvent(element, 'change');
+            }
+            filled += 1;
+            sendProgress(`Filled "${field}"`, 'success');
+          } catch (inner) {
+            sendProgress(`Error filling "${field}": ${String(inner)}`, 'error');
+          }
+        }
+        try {
+          chrome.runtime.sendMessage({ type: 'FILL_COMPLETE', fieldsFilled: filled });
+        } catch {
+          // ignore
+        }
+      },
+      args: [fieldValues, selectors, settings.autoFillDelay || 300],
+    });
+    appendProgress('Fill routine injected across frames; check progress.', 'info');
+  } catch (err: any) {
+    console.error('Injection failed:', err);
     setStatus('Refresh page and try again', '#d32f2f');
-    appendProgress('Unable to send fill request to the page.', 'error');
+    appendProgress(`Unable to send fill request to the page: ${err?.message || String(err)}`, 'error');
   }
 }
 
@@ -319,6 +466,12 @@ function clearProgress() {
   list.innerHTML = '<div class="progress-empty">Click Fill Application to see progress here.</div>';
 }
 
+function clearDiagnostics() {
+  const list = document.getElementById('diagnosticsList');
+  if (!list) return;
+  list.innerHTML = '<div class="diagnostics-empty">Diagnostic messages will appear here during fill.</div>';
+}
+
 function appendProgress(text: string, level = 'info') {
   const list = document.getElementById('progressList');
   if (!list) return;
@@ -326,6 +479,18 @@ function appendProgress(text: string, level = 'info') {
   if (empty) empty.remove();
   const item = document.createElement('div');
   item.className = `progress-item ${level}`;
+  item.textContent = text;
+  list.appendChild(item);
+  list.scrollTop = list.scrollHeight;
+}
+
+function appendDiagnostic(text: string, level = 'info') {
+  const list = document.getElementById('diagnosticsList');
+  if (!list) return;
+  const empty = list.querySelector('.diagnostics-empty');
+  if (empty) empty.remove();
+  const item = document.createElement('div');
+  item.className = `diagnostics-item ${level}`;
   item.textContent = text;
   list.appendChild(item);
   list.scrollTop = list.scrollHeight;

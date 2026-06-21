@@ -167,6 +167,39 @@ select:focus {
   color: #777;
   font-style: italic;
 }
+.diagnostics-section {
+  margin: 12px 0;
+}
+.diagnostics-log {
+  background: #f4f4ff;
+  border: 1px solid #d6d6ff;
+  border-radius: 6px;
+  padding: 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: #333;
+}
+.diagnostics-item {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.diagnostics-item:last-child {
+  margin-bottom: 0;
+}
+.diagnostics-item.info {
+  color: #333;
+}
+.diagnostics-item.success {
+  color: #2e7d32;
+}
+.diagnostics-item.error {
+  color: #d32f2f;
+}
+.diagnostics-empty {
+  color: #666;
+  font-style: italic;
+}
 .unmatched-section {
   margin: 12px 0;
 }

@@ -4,7 +4,7 @@ export default defineConfig({
   manifest: {
     name: 'Job Whiz',
     description: 'Auto-fill job applications on LinkedIn, Indeed, and more with your saved profile',
-    permissions: ['storage', 'activeTab'],
+    permissions: ['storage', 'activeTab', 'scripting'],
     host_permissions: ['https://*/*'],
     icons: {
       16: 'icons/icon16.png',

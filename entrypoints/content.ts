@@ -2,6 +2,7 @@ import { fillApplication, clearFilledFields } from '../utils/filler';
 
 export default defineContentScript({
   matches: ['https://*/*'],
+  allFrames: true,
   runAt: 'document_idle',
   main() {
     chrome.runtime.onMessage.addListener(

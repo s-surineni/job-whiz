@@ -94,6 +94,57 @@ export async function fillApplication(platform?: string): Promise<void> {
 
   sendProgress('Beginning form fill...', 'info');
 
+  // Diagnostic: report platform, control counts, and frame structure
+  try {
+    const allControls = Array.from(document.querySelectorAll('input, textarea, select'));
+    const allContenteditables = Array.from(document.querySelectorAll('[contenteditable="true"]'));
+    const visibleControls = allControls.filter((el) => (el as HTMLElement).offsetParent !== null || (el as HTMLElement).getClientRects().length > 0);
+    const visibleContentEditable = allContenteditables.filter((el) => (el as HTMLElement).offsetParent !== null || (el as HTMLElement).getClientRects().length > 0);
+    const iframes = Array.from(document.querySelectorAll('iframe, frame')) as Array<HTMLIFrameElement>;
+    const sameOriginFrames: string[] = [];
+    let accessibleFrames = 0;
+    for (const iframe of iframes) {
+      try {
+        const doc = iframe.contentDocument;
+        if (doc) {
+          accessibleFrames += 1;
+          sameOriginFrames.push(iframe.src || '[inline]');
+        }
+      } catch {
+        // cross-origin frame, ignore
+      }
+    }
+    const selectorKeys = Object.keys(selectors || {});
+    const profileFieldsWithValues: string[] = [];
+    for (const k of selectorKeys) {
+      const v = getValueFromProfile(profile as Profile, k);
+      if (v) profileFieldsWithValues.push(k);
+    }
+    const frameDescriptor = window.self === window.top ? 'top' : 'nested frame';
+    sendProgress(`Platform: ${activePlatform}; page form controls: ${visibleControls.length}; contenteditable: ${visibleContentEditable.length}`, 'info');
+    sendProgress(`Frame: ${frameDescriptor}; iframes: ${iframes.length}; accessible same-origin frames: ${accessibleFrames}`, 'info');
+    sendProgress(`Profile has values for ${profileFieldsWithValues.length}/${selectorKeys.length} fields.`, 'info');
+    chrome.runtime.sendMessage({
+      type: 'FILL_DIAGNOSTIC',
+      payload: {
+        platform: activePlatform,
+        frame: frameDescriptor,
+        url: window.location.href,
+        totalControls: allControls.length,
+        visibleControls: visibleControls.length,
+        contenteditableCount: allContenteditables.length,
+        visibleContenteditableCount: visibleContentEditable.length,
+        iframeCount: iframes.length,
+        accessibleSameOriginFrames: accessibleFrames,
+        sameOriginFrameUrls: sameOriginFrames,
+        selectorsSearched: selectorKeys.length,
+        profileFieldsWithValues,
+      },
+    });
+  } catch (diagErr) {
+    console.debug('Diagnostic send failed:', diagErr);
+  }
+
   let filled = 0;
 
   for (const [field, selectorOrArray] of Object.entries(selectors)) {
