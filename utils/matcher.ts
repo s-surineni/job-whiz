@@ -43,6 +43,7 @@ const FIELD_HINTS: Record<string, string[]> = {
   linkedin: ['linkedin', 'linkedin url', 'linkedin profile', 'linked in'],
   portfolio: ['portfolio', 'website', 'website url', 'personal website'],
   website: ['website', 'website url', 'personal website', 'personal website'],
+  privacyConsent: ['privacy policy', 'privacy agreement', 'acknowledge', 'agree', 'consent', 'terms and conditions'],
 };
 
 function normalizeText(text: string): string {
@@ -146,6 +147,9 @@ function scoreElementForField(field: string, element: HTMLElement): number {
   if (field === 'email' && type === 'email') score += 15;
   if (field === 'phone' && type === 'tel') score += 15;
   if ((field === 'linkedin' || field === 'portfolio' || field === 'website') && type === 'url') score += 15;
+
+  // Bonus: checkbox for privacyConsent
+  if (field === 'privacyConsent' && type === 'checkbox') score += 20;
 
   // Stronger heuristic for bracketed social URL field names like urls[LinkedIn]
   if (field === 'linkedin' && /\burls?\s*linkedin\b/.test(name)) score += 30;

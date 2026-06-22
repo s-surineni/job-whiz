@@ -28,6 +28,7 @@ function getValueFromProfile(
       ? professional.skills.join(', ')
       : '',
     workAuthorized: personal.workAuthorized,
+    privacyConsent: personal.privacyConsent,
   };
   return map[field];
 }
@@ -79,6 +80,19 @@ async function fillWorkAuthorization(
       radio.dispatchEvent(new Event('change', { bubbles: true }));
       return radio as HTMLElement;
     }
+  }
+  return null;
+}
+
+async function fillCheckbox(
+  element: HTMLElement,
+  value: string,
+): Promise<HTMLElement | null> {
+  const input = element as HTMLInputElement;
+  if (input.type === 'checkbox' && (value === 'true' || value === '1')) {
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return element;
   }
   return null;
 }
@@ -174,6 +188,31 @@ export async function fillApplication(platform?: string): Promise<void> {
         );
       } else {
           console.debug('Could not find work authorization field.');
+      }
+      continue;
+    }
+
+    // Handle privacy consent checkbox
+    if (field === 'privacyConsent') {
+      sendProgress(
+        `Looking for privacy consent field.`,
+        'info',
+      );
+      const result = findBestField(field);
+      if (result.element && (value === 'true' || value === '1')) {
+        const checkboxElement = await fillCheckbox(result.element, value);
+        if (checkboxElement) {
+          matchedElements.add(checkboxElement);
+          filled++;
+          sendProgress(
+            `Checked privacy consent field.`,
+            'success',
+          );
+        } else {
+          console.debug('Could not check privacy consent field.');
+        }
+      } else {
+        console.debug('No matching privacy consent field found or value is not true/1.');
       }
       continue;
     }

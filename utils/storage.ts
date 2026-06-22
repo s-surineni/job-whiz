@@ -15,6 +15,7 @@ export const DEFAULT_PROFILE = {
     portfolio: '',
     website: '',
     workAuthorized: 'yes',
+    privacyConsent: 'false',
   },
   professional: {
     headline: '',

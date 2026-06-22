@@ -217,6 +217,7 @@ async function onSaveProfile() {
     website: '',
     country: 'US',
     workAuthorized: getVal('workAuthorized'),
+    privacyConsent: getVal('privacyConsent'),
   };
   currentProfile!.professional = {
     headline: getVal('headline'),
