@@ -21,6 +21,7 @@ const AUTOCOMPLETE_MAP: Record<string, string[]> = {
   headline: ['organization-title', 'job-title'],
   linkedin: ['url'],
   portfolio: ['url'],
+  website: ['url'],
 };
 
 /** Text hints for heuristic matching (used when autocomplete is not available) */
@@ -41,6 +42,7 @@ const FIELD_HINTS: Record<string, string[]> = {
   workAuthorized: ['work authorized', 'legally authorized', 'work authorization', 'right to work', 'sponsor', 'sponsorship', 'work from office', 'remote', 'work location'],
   linkedin: ['linkedin', 'linkedin url', 'linkedin profile', 'linked in'],
   portfolio: ['portfolio', 'website', 'website url', 'personal website'],
+  website: ['website', 'website url', 'personal website', 'personal website'],
 };
 
 function normalizeText(text: string): string {
@@ -143,7 +145,12 @@ function scoreElementForField(field: string, element: HTMLElement): number {
   const type = (el.type || '').toLowerCase();
   if (field === 'email' && type === 'email') score += 15;
   if (field === 'phone' && type === 'tel') score += 15;
-  if ((field === 'linkedin' || field === 'portfolio') && type === 'url') score += 15;
+  if ((field === 'linkedin' || field === 'portfolio' || field === 'website') && type === 'url') score += 15;
+
+  // Stronger heuristic for bracketed social URL field names like urls[LinkedIn]
+  if (field === 'linkedin' && /\burls?\s*linkedin\b/.test(name)) score += 30;
+  if (field === 'portfolio' && /\burls?\s*portfolio\b/.test(name)) score += 30;
+  if (field === 'website' && /\burls?\s*website\b/.test(name)) score += 30;
 
   // Bonus: combobox for city/location fields
   if (field === 'city' && el.getAttribute('role') === 'combobox') score += 10;
@@ -206,8 +213,8 @@ export function findBestField(
 }
 
 /**
- * Find all unmatched form fields on the page (fields with score >= 20 that
- * weren't matched to any profile field).
+ * Find all unmatched form fields on the page.
+ * Any visible page field that was not matched during autofill should be reported.
  */
 export function findUnmatchedPageFields(
   matchedElements: Set<HTMLElement>,
@@ -230,15 +237,11 @@ export function findUnmatchedPageFields(
       }
     }
 
-    // Include any candidate with a reasonable heuristic match.
-    // Lowering threshold from 20 -> 10 so more potential unmatched fields are reported.
-    if (bestScore >= 10) {
-      results.push({
-        descriptor: describeElement(element as HTMLElement),
-        bestField,
-        score: bestScore,
-      });
-    }
+    results.push({
+      descriptor: describeElement(element as HTMLElement),
+      bestField,
+      score: bestScore,
+    });
   }
   return results;
 }

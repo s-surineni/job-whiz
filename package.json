@@ -7,7 +7,8 @@
     "build": "wxt build",
     "postbuild": "wxt prepare",
     "zip": "wxt zip",
-    "gen": "wxt prepare"
+    "gen": "wxt prepare",
+    "test": "vitest run"
   },
   "private": true,
   "repository": {
@@ -19,6 +20,8 @@
   },
   "homepage": "https://github.com/s-surineni/job-whiz#readme",
   "devDependencies": {
-    "wxt": "^0.21.0"
+    "wxt": "^0.21.0",
+    "vitest": "^1.5.9",
+    "jsdom": "^22.1.0"
   }
 }

@@ -90,6 +90,15 @@ export function getFieldSelectors(
       'input[name*="title" i]',
       'input[aria-label*="headline" i]',
     ],
+    linkedin: [
+      'input[name*="linkedin" i][type="url"], input[name*="linkedin" i][type="text"], input[aria-label*="linkedin" i], input[placeholder*="linkedin" i], input[id*="linkedin" i]',
+    ],
+    portfolio: [
+      'input[name*="portfolio" i][type="url"], input[aria-label*="portfolio" i], input[placeholder*="portfolio" i], input[id*="portfolio" i]',
+    ],
+    website: [
+      'input[name*="website" i][type="url"], input[name*="website" i][type="text"], input[aria-label*="website" i], input[placeholder*="website" i], input[id*="website" i]',
+    ],
     summary: [
       'textarea[name*="summary" i]',
       'textarea[name*="about" i]',

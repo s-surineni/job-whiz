@@ -502,7 +502,7 @@ function clearUnmatchedFields() {
   list.innerHTML = '<div class="unmatched-empty">Fields not matched on the page will appear here.</div>';
 }
 
-function renderUnmatchedFields(fields: any[]) {
+export function renderUnmatchedFields(fields: any[]) {
   const list = document.getElementById('unmatchedList');
   if (!list) return;
   list.innerHTML = '';
