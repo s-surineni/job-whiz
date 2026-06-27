@@ -59,7 +59,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   updatePlatformBadge();
   document.getElementById('saveProfile')!.addEventListener('click', onSaveProfile);
   document.getElementById('fillForm')!.addEventListener('click', onFillForm);
-  document.getElementById('clearForm')!.addEventListener('click', onClearForm);
   document.getElementById('addEmployment')!.addEventListener('click', () => addEntry('employment'));
   document.getElementById('addEducation')!.addEventListener('click', () => addEntry('education'));
   document.getElementById('autoFillDelay')!.addEventListener('change', onSettingsChange);
@@ -491,16 +490,6 @@ async function onFillForm() {
     console.error('Injection failed:', err);
     setStatus('Refresh page and try again', '#d32f2f');
     appendProgress(`Unable to send fill request to the page: ${err?.message || String(err)}`, 'error');
-  }
-}
-
-async function onClearForm() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  try {
-    await chrome.tabs.sendMessage(tab.id!, { type: 'CLEAR_FIELDS' });
-    setStatus('Fields cleared', '#555');
-  } catch (e) {
-    setStatus('Refresh page and try again', '#d32f2f');
   }
 }
 
