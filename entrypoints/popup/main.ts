@@ -323,6 +323,54 @@ async function onFillForm() {
           }
           return null;
         };
+        const normalizeText = (text: string): string => String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        const getLabelText = (element: HTMLElement): string => {
+          if (!element) return "";
+          let label = "";
+          if (element.id) {
+            const labelEl = document.querySelector(`label[for="${CSS.escape(element.id)}"]`);
+            if (labelEl) label = labelEl.textContent!.trim();
+          }
+          if (!label) {
+            const parentLabel = element.closest("label");
+            if (parentLabel) label = parentLabel.textContent!.trim();
+          }
+          return label.replace(/\\s+/g, " ").trim();
+        };
+        const describeElement = (el: HTMLElement | null): string => {
+          if (!el) return "[unknown page field]";
+          const parts: string[] = [el.tagName.toLowerCase()];
+          const input = el as HTMLInputElement;
+          if (input.type) parts.push(`type=${input.type}`);
+          if (input.id) parts.push(`id=${input.id}`);
+          if (input.name) parts.push(`name=${input.name}`);
+          if (input.placeholder) parts.push(`placeholder=${input.placeholder}`);
+          const aria = input.getAttribute("aria-label");
+          if (aria) parts.push(`aria-label=${aria}`);
+          const label = getLabelText(el);
+          if (label) parts.push(`label="${label}"`);
+          return parts.join(" ");
+        };
+        const fieldHints: Record<string, string[]> = {
+          firstName: ["first name", "given name", "first"],
+          lastName: ["last name", "surname", "last"],
+          fullName: ["full name", "name"],
+          email: ["email", "e-mail"],
+          phone: ["phone", "telephone", "mobile"],
+          address: ["address", "street"],
+          city: ["city", "location"],
+          state: ["state", "province"],
+          zip: ["zip", "postal"],
+          country: ["country"],
+          headline: ["headline", "job title", "title"],
+          summary: ["summary", "about"],
+          skills: ["skills"],
+          workAuthorized: ["work authorized", "legally authorized"],
+          linkedin: ["linkedin"],
+          portfolio: ["portfolio", "website"],
+          website: ["website"],
+        };
+        const matchedElements = new Set<HTMLElement>();
         let filled = 0;
         for (const field of Object.keys(selectorsArg || {})) {
           const value = fieldValuesArg[field];
@@ -367,12 +415,69 @@ async function onFillForm() {
               dispatchEvent(element, 'input');
               dispatchEvent(element, 'change');
             }
+             matchedElements.add(element);
             filled += 1;
             sendProgress(`Filled "${field}"`, 'success');
           } catch (inner) {
             sendProgress(`Error filling "${field}": ${String(inner)}`, 'error');
           }
         }
+         const unmatchedPageFields = [];
+         const candidates = Array.from(
+           document.querySelectorAll('input, textarea, select'),
+         ).filter(
+           (el) =>
+             (el as HTMLElement).offsetParent !== null ||
+             (el as HTMLElement).getClientRects().length > 0,
+         );
+         for (const el of candidates) {
+           const element = el as HTMLElement;
+           if (matchedElements.has(element)) continue;
+           const input = element as HTMLInputElement;
+           if (input.disabled) continue;
+           let bestField: string | null = null;
+           let bestScore = 0;
+           for (const field of Object.keys(fieldHints)) {
+             let score = 0;
+             const labelText = normalizeText(getLabelText(element));
+             for (const hint of fieldHints[field]) {
+               if (labelText.includes(normalizeText(hint))) {
+                 score += 40;
+                 break;
+               }
+             }
+             const name = normalizeText(input.name || '');
+             for (const hint of fieldHints[field]) {
+               if (name.includes(normalizeText(hint))) {
+                 score += 30;
+                 break;
+               }
+             }
+             if (input.id) {
+               const id = normalizeText(input.id);
+               for (const hint of fieldHints[field]) {
+                 if (id.includes(normalizeText(hint))) {
+                   score += 25;
+                   break;
+                 }
+               }
+             }
+             if (score > bestScore) {
+               bestScore = score;
+               bestField = field;
+             }
+           }
+           unmatchedPageFields.push({
+             descriptor: describeElement(element),
+             bestField,
+             score: bestScore,
+           });
+         }
+         try {
+           chrome.runtime.sendMessage({ type: 'UNMATCHED_PAGE_FIELDS', fields: unmatchedPageFields });
+         } catch {
+           // ignore
+         }
         try {
           chrome.runtime.sendMessage({ type: 'FILL_COMPLETE', fieldsFilled: filled });
         } catch {
